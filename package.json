@@ -1,0 +1,22 @@
+{
+  "name": "street-view",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "axios": "^0.18.0",
+    "mz": "^2.7.0",
+    "prop-types": "latest",
+    "react": "^16.2.0",
+    "react-async-loader": "latest",
+    "react-dom": "^16.2.0",
+    "react-google-map-street-view": "^1.1.0",
+    "react-scripts": "1.1.1",
+    "react-streetview": "https://github.com/elcsiga/react-streetview"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}
