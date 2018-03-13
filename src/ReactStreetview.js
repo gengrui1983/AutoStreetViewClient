@@ -13,8 +13,11 @@ class ReactStreetview extends React.Component {
         this.times = 0;
         this.maxTimes = 100;
         this.speed = 1000;
+        this.currentHeading = null;
         this.directory = new Date().getTime().toString();
-        ReactStreetview.moveForward = ReactStreetview.moveForward.bind(this);
+        this.creatNewDirectory = true;
+        this.moveForward = this.moveForward.bind(this);
+        this.initialize = this.initialize.bind(this);
         ReactStreetview.difference = ReactStreetview.difference.bind(this);
         this.download = this.download.bind(this);
     }
@@ -25,6 +28,8 @@ class ReactStreetview extends React.Component {
                 canvas,
                 this.props.streetViewPanoramaOptions
             );
+
+            this.currentHeading = this.props.streetViewPanoramaOptions.pov.heading;
 
             this.streetView.addListener('position_changed', () => {
                 console.log("lat:" + this.streetView.location.latLng.lat());
@@ -37,13 +42,13 @@ class ReactStreetview extends React.Component {
 
             this.streetView.addListener('links_changed', () => {
 
-                this.download(this.times, this.streetView.location.latLng.lat(), this.streetView.location.latLng.lng()
-                    , this.directory);
+                this.download(this.times, this.streetView.location.latLng.lat(), this.streetView.location.latLng.lng(),
+                    this.currentHeading, this.directory, this.creatNewDirectory);
 
                 if (this.streetView.links && this.times < this.maxTimes) {
                     console.log("times: ", this.times);
                     this.times++;
-                    setTimeout(ReactStreetview.moveForward, this.speed, this.streetView);
+                    setTimeout(this.moveForward, this.speed, this.streetView, this.currentHeading);
                 }
             });
 
@@ -59,11 +64,11 @@ class ReactStreetview extends React.Component {
         return Math.abs(pano.pov.heading % 360 - link.heading);
     }
 
-    static moveForward(pano) {
+    moveForward(pano) {
         var curr;
         for (let i = 0; i < pano.links.length; i++) {
             var differ = ReactStreetview.difference(pano, pano.links[i]);
-            if (curr == undefined) {
+            if (curr === undefined) {
                 curr = pano.links[i];
             }
 
@@ -71,11 +76,19 @@ class ReactStreetview extends React.Component {
                 curr = curr = pano.links[i];
             }
         }
+
+        let diff = Math.abs(this.currentHeading - curr.heading);
+        if(diff > 45) {
+            this.creatNewDirectory = true;
+            this.directory = new Date().getTime();
+        }
+        this.currentHeading = curr.heading;
+
+        pano.setPov({heading:curr.heading, pitch:0});
         pano.setPano(curr.pano);
-        // https://maps.googleapis.com/maps/api/streetview?size=400x300&pano=current.pano&fov=90&heading=90&pitch=0&key=AIzaSyBCNskTKxgdbmwCh4BpVH0oo5-Xqt87MvY
     }
 
-    download(times, lat, lng, directory) {
+    download(times, lat, lng, heading, directory, createNewDirectory) {
 
         fetch('http://localhost:8000/geo', {
             method: 'POST',
@@ -87,26 +100,11 @@ class ReactStreetview extends React.Component {
                 times: times,
                 lat: lat,
                 lng: lng,
-                directory: directory
+                heading: this.currentHeading,
+                directory: directory.toString(),
+                createNewDirectory: createNewDirectory
             })
         });
-
-        // let download = function (uri, filename, callback) {
-        //     request.head(uri, function (err, res, body) {
-        //         console.log('content-type:', res.headers['content-type']);
-        //         console.log('content-length:', res.headers['content-length']);
-        //
-        //         request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
-        //     });
-        // };
-        //
-        // download('https://maps.googleapis.com/maps/api/streetview?size=400x300&location=' +
-        //     lat + ',' + lng +
-        //     '&fov=90&heading=90&pitch=0&key=AIzaSyBCNskTKxgdbmwCh4BpVH0oo5-Xqt87MvY',
-        //     this.times + '_' + lat + '_' + lng + '.png',
-        //     function () {
-        //         console.log('done');
-        //     });
     }
 
     componentDidMount() {
@@ -141,7 +139,8 @@ ReactStreetview.propTypes = {
 
 ReactStreetview.defaultProps = {
     streetViewPanoramaOptions: {
-        position: {lat: 46.9171876, lng: 17.8951832},
+    // -33.877692, 151.205447
+        position: {lat: -33.877692, lng: 151.205447},
         pov: {heading: 0, pitch: 0},
         zoom: 1
     }
